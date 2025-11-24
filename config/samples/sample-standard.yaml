@@ -1,0 +1,32 @@
+apiVersion: argocd.platform.io/v1alpha1
+kind: ManagedArgoCDProject
+metadata:
+  name: tenant-app-standard
+  namespace: argocd
+spec:
+  # Name of the ArgoCD AppProject to create
+  projectName: tenant-app
+
+  # Source repositories that apps in this project can deploy from
+  repositories:
+    - https://github.com/your-org/app-configs
+    - https://github.com/your-org/helm-charts
+    - https://github.com/your-org/kustomize-bases
+
+  # Deployment destinations (clusters and namespaces)
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: tenant-app-dev
+      name: dev-cluster
+    - server: https://kubernetes.default.svc
+      namespace: tenant-app-staging
+      name: staging-cluster
+    - server: https://kubernetes.default.svc
+      namespace: tenant-app-prod
+      name: prod-cluster
+
+  # Template: standard (default), privileged, or restricted
+  template: standard
+
+  # Optional human-readable description
+  description: "Managed ArgoCD project for tenant-app across dev, staging, and production environments"

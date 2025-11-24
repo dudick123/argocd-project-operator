@@ -25,57 +25,94 @@ import (
 
 // ManagedArgoCDProjectSpec defines the desired state of ManagedArgoCDProject
 type ManagedArgoCDProjectSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-	// The following markers will use OpenAPI v3 schema to validate the value
-	// More info: https://book.kubebuilder.io/reference/markers/crd-validation.html
+	// ProjectName is the name of the ArgoCD AppProject to create/manage
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
+	ProjectName string `json:"projectName"`
 
-	// foo is an example field of ManagedArgoCDProject. Edit managedargocdproject_types.go to remove/update
-	// +optional
-	Foo *string `json:"foo,omitempty"`
+	// Repositories is the list of repository URLs that applications in this project can deploy from
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	Repositories []string `json:"repositories"`
+
+	// Destinations is the list of destination clusters and namespaces
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:MinItems=1
+	Destinations []ApplicationDestination `json:"destinations"`
+
+	// Template specifies which project template to use (standard, privileged, restricted)
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=standard
+	// +kubebuilder:validation:Enum=standard;privileged;restricted
+	Template string `json:"template,omitempty"`
+
+	// Description provides a human-readable description of the project
+	// +kubebuilder:validation:Optional
+	Description string `json:"description,omitempty"`
 }
 
-// ManagedArgoCDProjectStatus defines the observed state of ManagedArgoCDProject.
+// ApplicationDestination defines a destination cluster and namespace
+type ApplicationDestination struct {
+	// Server is the URL of the target cluster
+	// +kubebuilder:validation:Required
+	Server string `json:"server"`
+
+	// Namespace is the target namespace
+	// +kubebuilder:validation:Required
+	Namespace string `json:"namespace"`
+
+	// Name is an optional friendly name for the destination
+	// +kubebuilder:validation:Optional
+	Name string `json:"name,omitempty"`
+}
+
+// ManagedArgoCDProjectStatus defines the observed state of ManagedArgoCDProject
 type ManagedArgoCDProjectStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// For Kubernetes API conventions, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
-
-	// conditions represent the current state of the ManagedArgoCDProject resource.
-	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
-	//
-	// Standard condition types include:
-	// - "Available": the resource is fully functional
-	// - "Progressing": the resource is being created or updated
-	// - "Degraded": the resource failed to reach or maintain its desired state
-	//
-	// The status of each condition is one of True, False, or Unknown.
+	// Conditions represent the latest available observations of the project's state
+	// +kubebuilder:validation:Optional
+	// +patchMergeKey=type
+	// +patchStrategy=merge
 	// +listType=map
 	// +listMapKey=type
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+
+	// ProjectName is the name of the created ArgoCD AppProject
+	// +kubebuilder:validation:Optional
+	ProjectName string `json:"projectName,omitempty"`
+
+	// Phase represents the current phase of the project (Pending, Ready, Failed)
+	// +kubebuilder:validation:Optional
+	Phase string `json:"phase,omitempty"`
+
+	// ObservedGeneration reflects the generation of the most recently observed spec
+	// +kubebuilder:validation:Optional
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// LastSyncTime is the timestamp of the last successful sync
+	// +kubebuilder:validation:Optional
+	LastSyncTime *metav1.Time `json:"lastSyncTime,omitempty"`
+
+	// RenderedYAML contains the rendered AppProject manifest (useful for GitOps export)
+	// +kubebuilder:validation:Optional
+	RenderedYAML string `json:"renderedYAML,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:resource:shortName=macp;macproject
+// +kubebuilder:printcolumn:name="Project",type=string,JSONPath=`.spec.projectName`
+// +kubebuilder:printcolumn:name="Template",type=string,JSONPath=`.spec.template`
+// +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=`.status.phase`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 
-// ManagedArgoCDProject is the Schema for the managedargocdprojects API
+// ManagedArgoCDProject is the Schema for the managedargoCDprojects API
 type ManagedArgoCDProject struct {
-	metav1.TypeMeta `json:",inline"`
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// metadata is a standard object metadata
-	// +optional
-	metav1.ObjectMeta `json:"metadata,omitzero"`
-
-	// spec defines the desired state of ManagedArgoCDProject
-	// +required
-	Spec ManagedArgoCDProjectSpec `json:"spec"`
-
-	// status defines the observed state of ManagedArgoCDProject
-	// +optional
-	Status ManagedArgoCDProjectStatus `json:"status,omitzero"`
+	Spec   ManagedArgoCDProjectSpec   `json:"spec,omitempty"`
+	Status ManagedArgoCDProjectStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -83,7 +120,7 @@ type ManagedArgoCDProject struct {
 // ManagedArgoCDProjectList contains a list of ManagedArgoCDProject
 type ManagedArgoCDProjectList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitzero"`
+	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []ManagedArgoCDProject `json:"items"`
 }
 
